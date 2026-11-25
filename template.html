@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backend Lab Demos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/*
+VOICE: a confident engineering demo, crisp and factual, like a payments company's docs.
+IDEA: a ledger sheet and an on-call incident console, each running live.
+PICTURE: the working tools themselves: wallets, a payment terminal, an audit stamp; an incident console where you diagnose like an on-call engineer.
+COLOUR and TYPE: white, ink #101418, one warm yellow slab #ffd84a behind the audit result, slate; Manrope throughout.
+LAYOUT: top bar with tabs, each tab opens straight into its tool; detail and explanation sit below the tool.
+*/
+:root{color-scheme:light dark;
+  --bg:light-dark(#ffffff,#101418);--ink:light-dark(#101418,#eef1f4);--slate:light-dark(#5b6573,#9aa4b2);
+  --line:light-dark(#e3e7ec,#262c34);--panel:light-dark(#f6f7f9,#171c22);--yellow:#ffd84a;
+  --good:light-dark(#0f7b4f,#4cc38a);--bad:light-dark(#c4321f,#ff7a66);--focus:light-dark(#1d4ed8,#8ab4ff)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Manrope,system-ui,sans-serif;overflow-x:clip}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+header{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between;padding:14px max(5vw,16px);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
+.brand{font-weight:800;font-size:17px;letter-spacing:-.01em}
+.brand small{display:block;font-weight:500;font-size:13px;color:var(--slate)}
+nav{display:flex;flex-wrap:wrap;gap:6px}
+nav button{border:1px solid var(--line);background:none;border-radius:999px;padding:9px 16px;min-height:44px;cursor:pointer;font-weight:600}
+nav button[aria-selected=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.mode{font-size:13px;color:var(--slate)}
+.mode b{color:var(--ink)}
+main{max-width:1240px;margin:0 auto}
+.band{padding:clamp(24px,4vw,52px) max(5vw,16px)}
+h1{font-size:clamp(30px,4.4vw,46px);line-height:1.05;margin:0 0 10px;text-wrap:balance;font-weight:800;letter-spacing:-.02em}
+h2{font-size:20px;margin:0 0 12px;font-weight:700}
+.lede{color:var(--slate);max-width:68ch;margin:0 0 24px;font-size:17px}
+.grid{display:grid;gap:18px}
+.two{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}
+@media(max-width:900px){.two{grid-template-columns:minmax(0,1fr)}}
+.card{border:1px solid var(--line);border-radius:14px;padding:18px;background:var(--bg)}
+.panel{background:var(--panel);border-color:transparent}
+.wallets{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.wallet{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--bg);transition:transform .25s}
+.wallet.bump{transform:translateY(-3px)}
+.wallet .who{font-size:13px;color:var(--slate)}
+.wallet .amt{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.wallet.merchant{border-color:var(--ink)}
+label{display:block;font-size:13px;font-weight:600;margin:0 0 6px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.row>div{flex:1 1 140px}
+input,select,textarea{width:100%;min-height:44px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg);font-size:16px}
+.btn{min-height:44px;border-radius:10px;border:1px solid var(--ink);background:var(--ink);color:var(--bg);padding:10px 16px;font-weight:700;cursor:pointer;white-space:nowrap}
+.btn.ghost{background:none;color:var(--ink);border-color:var(--line)}
+.btn.danger{background:none;color:var(--bad);border-color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:progress}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.audit{border-radius:14px;padding:18px 20px;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;justify-content:space-between}
+.audit.ok{background:var(--yellow);color:#101418}
+.audit.broken{background:var(--bad);color:#fff}
+.audit .big{font-size:clamp(22px,3vw,30px);font-weight:800;line-height:1.1}
+.audit .meta{font-size:14px;max-width:46ch}
+.result{margin-top:14px;font-size:15px;padding:12px 14px;border-radius:10px;background:var(--panel);display:none}
+.result.show{display:block}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:13px;color:var(--slate);font-weight:600}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;border:1px solid}
+.tag.succeeded{color:var(--good)}.tag.failed{color:var(--bad)}.tag.refunded{color:var(--slate)}
+.log{list-style:none;margin:0;padding:0;font-size:13px;max-height:260px;overflow:auto}
+.log li{display:grid;grid-template-columns:52px minmax(0,1fr);gap:8px;padding:7px 0;border-bottom:1px solid var(--line)}
+.code{font-weight:800;font-variant-numeric:tabular-nums}
+.c2{color:var(--good)}.c4{color:var(--bad)}
+.empty{color:var(--slate);font-size:14px;padding:12px 0}
+.explain{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}
+.explain h3{font-size:16px;margin:0 0 4px}
+.explain p{margin:0;color:var(--slate);font-size:15px}
+.ask{display:flex;gap:10px;flex-wrap:wrap}
+.ask input{flex:1 1 260px;font-size:17px;min-height:52px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}
+.chip{border:1px solid var(--line);background:none;border-radius:999px;padding:8px 14px;min-height:40px;cursor:pointer;font-size:14px}
+.answer{font-size:16px;white-space:pre-wrap;line-height:1.6}
+.answer .cite{font-weight:800;background:var(--yellow);color:#101418;border-radius:4px;padding:0 4px;font-size:13px}
+.source{border-left:3px solid var(--ink);padding:8px 12px;margin:10px 0;background:var(--panel);border-radius:0 10px 10px 0}
+.source .where{font-size:13px;font-weight:700}
+.source .txt{font-size:14px;color:var(--slate);display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap}
+.docs{list-style:none;padding:0;margin:0}
+.docs li{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+.docs .x{border:none;background:none;color:var(--slate);cursor:pointer;min-height:36px;min-width:36px;font-size:18px}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:16px;text-align:center;font-size:14px;color:var(--slate);margin-top:12px}
+.drop.over{border-color:var(--ink);color:var(--ink)}
+.small{font-size:13px;color:var(--slate)}
+.hidden{display:none!important}
+.scroll{overflow-x:auto}
+pre{overflow-x:auto;background:var(--panel);padding:12px;border-radius:10px;font-size:13px}
+@media(max-width:600px){table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px;border-bottom:1px solid var(--line)}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:7em;text-align:start}.stack td.num{text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:6.5em;margin-inline-start:-7em;color:var(--slate);white-space:normal}.stack td:empty{display:none}.stack td.empty{padding-inline-start:0}.stack td.empty::before{content:none}}
+.seg{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.seg button{border:1px solid var(--line);background:none;border-radius:10px;padding:8px 12px;min-height:44px;cursor:pointer;font-weight:600;font-size:14px}
+.seg button[aria-checked=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip.done{border-style:dashed}
+.alertbar{background:var(--ink);color:var(--bg);border-radius:10px;padding:10px 14px;font-weight:700;font-size:15px;margin-bottom:12px}
+table.metrics td,table.metrics th{padding:7px 6px;font-size:13px}
+.up{color:var(--bad);font-weight:800}
+.facts{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.fact{border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:13px}
+.fact.hot{border-color:var(--bad);color:var(--bad);font-weight:700}
+.loghead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:6px}
+.loghead h3{margin:0;font-size:15px}
+pre.logs{max-height:300px;overflow:auto;font-size:12px;line-height:1.5;white-space:pre;margin:8px 0 0}
+.labels{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.labels button{border:1px solid var(--line);background:none;border-radius:10px;padding:10px;min-height:44px;cursor:pointer;font-weight:600;font-size:14px;text-align:left}
+.labels button:hover:not(:disabled){border-color:var(--ink)}
+.labels button.truth{background:var(--yellow);color:#101418;border-color:var(--yellow)}
+.labels button.wrong{border-color:var(--bad);color:var(--bad)}
+.labels button:disabled{cursor:default}
+.verdict{margin-top:14px;padding:12px 14px;border-radius:10px;background:var(--panel)}
+.verdict b.ok{color:var(--good)}.verdict b.no{color:var(--bad)}
+.results{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}
+.rgroup h3{font-size:14px;margin:0 0 8px}
+.bar{display:grid;grid-template-columns:7.5em minmax(0,1fr) 3.2em;gap:8px;align-items:center;font-size:13px;margin:5px 0}
+.bar .track{background:var(--panel);border-radius:6px;height:14px;overflow:hidden}
+.bar .fill{height:100%;background:var(--ink);border-radius:6px}
+.bar .fill.rules{background:var(--slate)}.bar .fill.majority{background:var(--line)}
+.bar .v{text-align:right;font-variant-numeric:tabular-nums}
+@media(max-width:600px){header{position:static}}
+@media(prefers-reduced-motion:reduce){.wallet{transition:none}}
+</style>
+<script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
+</head>
+<body>
+<header>
+  <div class="brand">Backend Lab<small>A payments engine and an AI research benchmark</small></div>
+  <nav role="tablist">
+    <button role="tab" id="tab-payments" aria-selected="true" data-view="payments">Payments API</button>
+    <button role="tab" id="tab-rca" aria-selected="false" data-view="rca">AI incident research</button>
+    <button role="tab" id="tab-connect" aria-selected="false" data-view="connect">Connect</button>
+  </nav>
+  <div class="mode" id="modeLine"></div>
+</header>
+
+<main>
+<!-- ============================== PAYMENTS ============================== -->
+<section id="view-payments" class="band">
+  <h1>Payments that never charge twice</h1>
+  <p class="lede">Pay, double-tap, race five requests at once, refund. The audit stays balanced, because every movement goes through idempotency keys, row locks and a double-entry ledger. Then try the unsafe version and watch the books break.</p>
+
+  <div class="grid two">
+    <div>
+      <div class="wallets" id="wallets"></div>
+      <div class="card">
+        <h2>New payment to Chennai Chai Co.</h2>
+        <div class="row">
+          <div><label for="payCust">Customer</label><select id="payCust"></select></div>
+          <div><label for="payAmt">Amount (₹)</label><input id="payAmt" type="number" min="1" step="1" value="40" inputmode="numeric"></div>
+          <div><label for="payKey">Idempotency key</label><input id="payKey" autocomplete="off"></div>
+        </div>
+        <div class="btns">
+          <button class="btn" id="btnPay">Pay</button>
+          <button class="btn ghost" id="btnRetry" title="Sends the same request again with the same key">Retry same request</button>
+          <button class="btn ghost" id="btnRace">Fire 5 at once (safe)</button>
+          <button class="btn danger" id="btnUnsafe">Fire 5 at once (unsafe)</button>
+          <button class="btn ghost" id="btnReset">Reset</button>
+        </div>
+        <div class="result" id="payResult" role="status"></div>
+      </div>
+    </div>
+    <div class="grid" style="align-content:start">
+      <div class="audit ok" id="audit" role="status">
+        <div><div class="big" id="auditBig">Books balanced</div><div class="meta" id="auditMeta"></div></div>
+        <button class="btn ghost" id="btnAudit" style="border-color:currentColor;color:inherit">Re-run audit</button>
+      </div>
+      <div class="card">
+        <h2>Request log</h2>
+        <ul class="log" id="log"><li class="empty">Requests you send show up here with their status codes.</li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <h2>Payments</h2>
+    <div class="scroll"><table class="stack">
+      <thead><tr><th>Payment</th><th>Customer</th><th class="num">Amount</th><th>Status</th><th class="num">Refunded</th><th></th></tr></thead>
+      <tbody id="payRows"></tbody>
+    </table></div>
+  </div>
+
+  <div class="explain" style="margin-top:28px">
+    <div><h3>Idempotency keys</h3><p>The first request with a key does the work; any repeat gets the saved response back. A different body with the same key is rejected with 422.</p></div>
+    <div><h3>Row locks</h3><p>Wallets are locked in a fixed order while a payment runs, so five payments at once can't spend the same rupee twice, and can't deadlock.</p></div>
+    <div><h3>Double-entry ledger</h3><p>Every movement is a debit and a credit summing to zero. The audit recomputes each balance from the ledger.</p></div>
+    <div><h3>The unsafe button</h3><p>It reads the balance, waits, then writes without locking. Parallel requests overwrite each other (a lost update), and the audit catches it.</p></div>
+  </div>
+</section>
+
+<!-- ============================ RCA RESEARCH ============================ -->
+<section id="view-rca" class="band hidden">
+  <h1>Can AI find why it broke when the logs are bad?</h1>
+  <p class="lede">A research benchmark: known failures are injected into a simulated shop, then shown with full, noisy, vague or no logs. Diagnose an incident yourself, then compare with the true cause and with what each method answered for exactly the same evidence.</p>
+  <div class="grid two">
+    <div class="card">
+      <div class="small" style="margin-bottom:6px">Incident</div>
+      <div class="chips" id="incPick" style="margin:0 0 14px"></div>
+      <div class="small" style="margin-bottom:6px">Evidence quality</div>
+      <div class="seg" id="condPick" role="radiogroup" aria-label="Evidence quality"></div>
+      <div class="alertbar" id="rcaAlert" role="status"></div>
+      <div class="scroll"><table class="metrics" id="rcaMetrics"></table></div>
+      <div class="facts" id="rcaFacts"></div>
+      <div class="loghead"><h3>Logs</h3><span class="small" id="logCount"></span></div>
+      <pre class="logs" id="rcaLogs"></pre>
+    </div>
+    <div class="grid" style="align-content:start">
+      <div class="card">
+        <h2>Your diagnosis</h2>
+        <p class="small" id="score" style="margin:-6px 0 12px"></p>
+        <div class="labels" id="labelPick"></div>
+        <div id="verdict"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:18px">
+    <h2 id="resultsTitle">Results across the full benchmark</h2>
+    <div class="results" id="rcaResults"></div>
+    <p class="small" id="rcaNote" style="margin-top:12px"></p>
+  </div>
+  <div class="explain" style="margin-top:28px">
+    <div><h3>Exact ground truth</h3><p>Every incident is a failure injected on purpose, so the right answer is known for certain, unlike real incident archives.</p></div>
+    <div><h3>Paired conditions</h3><p>Each incident is shown four ways with identical metrics. Only the logs change, so any accuracy drop is caused by log quality alone.</p></div>
+    <div><h3>Confusable faults</h3><p>A bad release and a full disk both break checkout with 500s; a slow database and a busy CPU both add latency. Telling them apart takes real reasoning.</p></div>
+  </div>
+</section>
+
+<!-- ============================== CONNECT =============================== -->
+<section id="view-connect" class="band hidden">
+  <h1>Connect your deployed payments API</h1>
+  <p class="lede">Leave this empty to use demo mode, which runs the payments engine in your browser. After you deploy the API, paste its URL here. Live connections only work when this page is hosted on your own site (for example on Vercel), because the Claude preview blocks network requests.</p>
+  <div class="grid two">
+    <form class="card" id="connectForm">
+      <label for="payUrl">Payments API URL</label>
+      <input id="payUrl" placeholder="https://payments-api.onrender.com" autocomplete="off">
+      <div class="btns">
+        <button class="btn" type="submit">Save and test</button>
+        <button class="btn ghost" type="button" id="btnDemo">Use demo mode</button>
+      </div>
+      <div class="result" id="connectResult" role="status"></div>
+    </form>
+    <div class="card panel">
+      <h2>Deploy checklist</h2>
+      <ol style="margin:0;padding-left:20px;font-size:15px">
+        <li>Payments: create a free Postgres on neon.tech, then a Docker web service on render.com with <code>DATABASE_URL</code> set.</li>
+        <li>This page: drop the HTML file into a new Vercel or Netlify project.</li>
+        <li>Paste the API URL here and press Save and test. (The research tab needs no server: rebuild the page with build.py after running models.)</li>
+      </ol>
+      <p class="small" style="margin-top:12px">Free Render services sleep when idle, so the first request can take around 30 seconds.</p>
+    </div>
+  </div>
+</section>
+</main>
+
+<script>
+{
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const rupees = p => "₹" + (p / 100).toLocaleString("en-IN", {minimumFractionDigits: p % 100 ? 2 : 0, maximumFractionDigits: 2});
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+const store = {get(k){try{return localStorage.getItem(k)||""}catch{return ""}}, set(k,v){try{localStorage.setItem(k,v)}catch{}}};
+
+/* ======================= payments: in-browser engine ======================= */
+class Mutex { constructor(){ this.p = Promise.resolve(); }
+  lock(){ let release; const next = new Promise(r => release = r); const prev = this.p; this.p = prev.then(() => next); return prev.then(() => release); } }
+
+class LocalPayments {
+  constructor(){ this.reset(); }
+  async reset(){
+    this.accounts = {}; this.payments = []; this.ledger = []; this.idem = new Map(); this.locks = {};
+    const seed = [["acct_external","Outside world","system",0],["merch_chai","Chennai Chai Co.","merchant",0],
+      ["cust_priya","Priya","customer",50000],["cust_arjun","Arjun","customer",20000],["cust_meera","Meera","customer",5000]];
+    for (const [id,name,kind] of seed) this.accounts[id] = {id,name,kind,balance:0};
+    for (const [id,,,bal] of seed) if (bal) this.move("seed_"+id, "topup", "acct_external", id, bal);
+    return {ok:true};
+  }
+  lockFor(id){ return this.locks[id] ||= new Mutex(); }
+  async withLocks(ids, fn){
+    const releases = [];
+    for (const id of [...new Set(ids)].sort()) releases.push(await this.lockFor(id).lock());
+    try { return await fn(); } finally { releases.reverse().forEach(r => r()); }
+  }
+  move(txn, kind, debit, credit, amount){
+    this.ledger.push({txn, account:debit, amount:-amount, kind}, {txn, account:credit, amount, kind});
+    this.accounts[debit].balance -= amount; this.accounts[credit].balance += amount;
+  }
+  async idempotent(key, hash, work){
+    if (!key) return {code:400, body:{error:{message:"Idempotency-Key header is required"}}};
+    const saved = this.idem.get(key);
+    if (saved){
+      if (saved.hash !== hash) return {code:422, body:{error:{message:"This key was already used for a different request"}}};
+      if (saved.status === "completed") return {...saved.res, replayed:true};
+      return {code:409, body:{error:{message:"A request with this key is already in progress"}}};
+    }
+    this.idem.set(key, {hash, status:"in_progress"});  // like the primary-key INSERT: only one caller wins
+    const res = await work();
+    this.idem.set(key, {hash, status:"completed", res});
+    return {...res, replayed:false};
+  }
+  pay(customer, amount, key, description=""){
+    return this.idempotent(key, JSON.stringify(["pay",customer,amount,description]), () =>
+      this.withLocks([customer, "merch_chai"], async () => {
+        await sleep(120);  // fraud check while holding the lock
+        const c = this.accounts[customer];
+        if (!c || c.kind !== "customer") return {code:404, body:{error:{message:"No such customer"}}};
+        const p = {id:"pay_"+uid().replace(/-/g,"").slice(0,12), customer_id:customer, amount, status:"succeeded",
+          failure_reason:null, refunded_amount:0, description, created_at:new Date().toISOString()};
+        if (c.balance < amount){ p.status = "failed"; p.failure_reason = "insufficient_funds"; this.payments.unshift(p); return {code:402, body:{...p}}; }
+        this.move(p.id, "charge", customer, "merch_chai", amount);
+        this.payments.unshift(p);
+        return {code:201, body:{...p}};
+      }));
+  }
+  refund(paymentId, amount, key){
+    return this.idempotent(key, JSON.stringify(["refund",paymentId,amount]), () =>
+      this.withLocks(["pay:"+paymentId], async () => {
+        const p = this.payments.find(x => x.id === paymentId);
+        if (!p) return {code:404, body:{error:{message:"Payment not found"}}};
+        if (p.status !== "succeeded") return {code:409, body:{error:{message:"Only succeeded payments can be refunded"}}};
+        const left = p.amount - p.refunded_amount, amt = amount || left;
+        if (amt > left || amt <= 0) return {code:409, body:{error:{message:`Only ${rupees(left)} left to refund`}}};
+        return this.withLocks([p.customer_id, "merch_chai"], async () => {
+          await sleep(80);
+          if (this.accounts.merch_chai.balance < amt) return {code:409, body:{error:{message:"Merchant balance too low"}}};
+          const rid = "re_"+uid().replace(/-/g,"").slice(0,12);
+          this.move(rid, "refund", "merch_chai", p.customer_id, amt);
+          p.refunded_amount += amt;
+          return {code:201, body:{id:rid, amount:amt, payment:{...p}}};
+        });
+      }));
+  }
+  async unsafePay(customer, amount){
+    // THE BUG on purpose: read, wait, write absolute values, no lock, no key
+    const cBal = this.accounts[customer].balance, mBal = this.accounts.merch_chai.balance;
+    if (cBal < amount) return {code:402, body:{error:{message:"insufficient_funds"}}};
+    await sleep(200);
+    const id = "pay_"+uid().replace(/-/g,"").slice(0,12);
+    this.accounts[customer].balance = cBal - amount;
+    this.accounts.merch_chai.balance = mBal + amount;
+    this.ledger.push({txn:id, account:customer, amount:-amount, kind:"charge"}, {txn:id, account:"merch_chai", amount, kind:"charge"});
+    const p = {id, customer_id:customer, amount, status:"succeeded", refunded_amount:0, description:"[UNSAFE]", created_at:new Date().toISOString()};
+    this.payments.unshift(p);
+    return {code:201, body:p};
+  }
+  async listAccounts(){ return Object.values(this.accounts).filter(a => a.kind !== "system").map(a => ({...a})); }
+  async listPayments(){ return this.payments.map(p => ({...p})); }
+  async check(){
+    const sums = {}; let total = 0;
+    for (const e of this.ledger){ sums[e.account] = (sums[e.account]||0) + e.amount; total += e.amount; }
+    const mismatched = Object.values(this.accounts).filter(a => a.balance !== (sums[a.id]||0)).map(a => ({id:a.id, balance:a.balance, ledger_sum:sums[a.id]||0}));
+    return {balanced: total === 0 && !mismatched.length, ledger_total: total, mismatched_accounts: mismatched,
+      payments:{succeeded:this.payments.filter(p=>p.status==="succeeded").length, failed:this.payments.filter(p=>p.status==="failed").length}};
+  }
+}
+
+class RemotePayments {
+  constructor(base){ this.base = base.replace(/\/+$/,""); this.h = {"X-API-Key":"sk_test_demo","Content-Type":"application/json"}; }
+  async call(method, path, body, key){
+    const headers = {...this.h}; if (key) headers["Idempotency-Key"] = key;
+    const r = await fetch(this.base + path, {method, headers, body: body ? JSON.stringify(body) : undefined});
+    let data = {}; try { data = await r.json(); } catch {}
+    if (data.detail && !data.error) data = {error:{message: typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail)}};
+    return {code:r.status, body:data, replayed: r.headers.get("Idempotent-Replayed") === "true"};
+  }
+  pay(customer, amount, key, description=""){ return this.call("POST","/v1/payments",{customer_id:customer, amount, description}, key); }
+  refund(id, amount, key){ return this.call("POST",`/v1/payments/${encodeURIComponent(id)}/refunds`, amount ? {amount} : {}, key); }
+  unsafePay(customer, amount){ return this.call("POST","/v1/demo/unsafe-payment",{customer_id:customer, amount}); }
+  async reset(){ return (await this.call("POST","/v1/demo/reset")).body; }
+  async listAccounts(){ return (await this.call("GET","/v1/accounts")).body.data || []; }
+  async listPayments(){ return (await this.call("GET","/v1/payments")).body.data || []; }
+  async check(){ return (await this.call("GET","/v1/ledger/check")).body; }
+}
+
+/* ================================ wiring ================================== */
+let payments = new LocalPayments();
+let lastRequest = null;
+
+function setMode(){
+  $("modeLine").innerHTML = `Payments: <b>${payments instanceof RemotePayments ? "live API" : "in-browser demo"}</b>`;
+}
+
+function showView(v){
+  for (const b of document.querySelectorAll("nav button")) b.setAttribute("aria-selected", b.dataset.view === v);
+  for (const s of ["payments","rca","connect"]) $("view-"+s).classList.toggle("hidden", s !== v);
+  if (location.hash.slice(1) !== v) history.replaceState(null, "", "#" + v);
+}
+document.querySelector("nav").addEventListener("click", e => { const v = e.target.closest("button")?.dataset.view; if (v) showView(v); });
+window.addEventListener("hashchange", () => { const v = location.hash.slice(1); if (["payments","rca","connect"].includes(v)) showView(v); });
+
+/* ---- payments UI ---- */
+let prevBal = {};
+async function renderPayments(){
+  const [accts, pays, audit] = await Promise.all([payments.listAccounts(), payments.listPayments(), payments.check()]);
+  $("wallets").innerHTML = accts.map(a => `<div class="wallet ${esc(a.kind)} ${prevBal[a.id] !== undefined && prevBal[a.id] !== a.balance ? "bump" : ""}">
+    <div class="who">${esc(a.name)}${a.kind === "merchant" ? " (merchant)" : ""}</div><div class="amt">${rupees(a.balance)}</div></div>`).join("");
+  setTimeout(() => document.querySelectorAll(".wallet.bump").forEach(w => w.classList.remove("bump")), 300);
+  prevBal = Object.fromEntries(accts.map(a => [a.id, a.balance]));
+  const sel = $("payCust"), cur = sel.value;
+  sel.innerHTML = accts.filter(a => a.kind === "customer").map(a => `<option value="${esc(a.id)}">${esc(a.name)} (${rupees(a.balance)})</option>`).join("");
+  if (cur) sel.value = cur;
+  $("payRows").innerHTML = pays.length ? pays.map(p => {
+    const full = p.refunded_amount >= p.amount && p.status === "succeeded";
+    const tag = full ? `<span class="tag refunded">refunded</span>` : `<span class="tag ${esc(p.status)}">${esc(p.status)}${p.failure_reason ? " · " + esc(p.failure_reason.replace("_"," ")) : ""}</span>`;
+    const canRefund = p.status === "succeeded" && !full && !String(p.description||"").includes("UNSAFE");
+    return `<tr><td><code>${esc(p.id)}</code>${String(p.description||"").includes("UNSAFE") ? ' <span class="tag failed">unsafe</span>' : ""}</td>
+      <td>${esc((accts.find(a => a.id === p.customer_id)||{}).name || p.customer_id)}</td>
+      <td class="num">${rupees(p.amount)}</td><td>${tag}</td><td class="num">${p.refunded_amount ? rupees(p.refunded_amount) : "–"}</td>
+      <td>${canRefund ? `<button class="btn ghost" data-refund="${esc(p.id)}">Refund rest</button>` : ""}</td></tr>`;
+  }).join("") : `<tr><td colspan="6" class="empty">No payments yet. Send one above.</td></tr>`;
+  const a = $("audit");
+  a.className = "audit " + (audit.balanced ? "ok" : "broken");
+  $("auditBig").textContent = audit.balanced ? "Books balanced" : "Books broken";
+  $("auditMeta").textContent = audit.balanced
+    ? `Ledger sums to ₹0 and every wallet matches its entries · ${audit.payments.succeeded} succeeded, ${audit.payments.failed} failed`
+    : `${audit.mismatched_accounts.length} wallet(s) don't match the ledger: money was created out of nothing. Press Reset to start clean.`;
+}
+
+function log(code, text, replayed){
+  const ul = $("log"); if (ul.querySelector(".empty")) ul.innerHTML = "";
+  const li = document.createElement("li");
+  const c = document.createElement("span"); c.className = "code " + (code < 300 ? "c2" : "c4"); c.textContent = code;
+  const t = document.createElement("span"); t.textContent = text + (replayed ? " (replayed, no new charge)" : "");
+  li.append(c, t); ul.prepend(li);
+}
+function say(html){ const r = $("payResult"); r.innerHTML = html; r.classList.add("show"); }
+const describe = (res) => res.body?.error ? res.body.error.message : res.body?.status === "failed" ? "Declined: insufficient funds" : res.body?.id ? `${res.body.status || "ok"} · ${res.body.id}` : "done";
+const freshKey = () => { $("payKey").value = "order-" + uid().slice(0,8); };
+
+async function busy(btn, fn){ document.querySelectorAll("#view-payments .btn").forEach(b => b.disabled = true);
+  try { await fn(); } catch (e) { say("Request failed: " + esc(e.message) + ". Is the API awake? Check the Connect tab."); }
+  finally { document.querySelectorAll("#view-payments .btn").forEach(b => b.disabled = false); await renderPayments().catch(() => {}); } }
+
+function readForm(){ const amt = Math.round(parseFloat($("payAmt").value) * 100);
+  if (!(amt > 0)) { say("Enter an amount above ₹0."); return null; }
+  return {customer:$("payCust").value, amount:amt, key:$("payKey").value.trim()}; }
+
+$("btnPay").onclick = () => busy(null, async () => {
+  const f = readForm(); if (!f) return;
+  const res = await payments.pay(f.customer, f.amount, f.key, "Chai order");
+  lastRequest = f; log(res.code, `POST /v1/payments ${rupees(f.amount)} · ${describe(res)}`, res.replayed);
+  say(res.code === 201 ? `Charged ${rupees(f.amount)}. Press <b>Retry same request</b> to see that the same key never charges again.` : esc(describe(res)));
+  if (res.code === 201 || res.code === 402) freshKey();
+});
+$("btnRetry").onclick = () => busy(null, async () => {
+  if (!lastRequest) { say("Send a payment first, then retry it."); return; }
+  const f = lastRequest, res = await payments.pay(f.customer, f.amount, f.key, "Chai order");
+  log(res.code, `POST /v1/payments retry with key ${f.key} · ${describe(res)}`, res.replayed);
+  say(res.replayed ? `Same key, same answer: payment <code>${esc(res.body.id)}</code> returned again. No second charge.` : esc(describe(res)));
+});
+$("btnRace").onclick = () => busy(null, async () => {
+  const f = readForm(); if (!f) return;
+  const results = await Promise.all(Array.from({length:5}, () => payments.pay(f.customer, f.amount, f.key, "Chai order")));
+  lastRequest = f;
+  results.forEach(r => log(r.code, `POST /v1/payments (parallel, key ${f.key}) · ${describe(r)}`, r.replayed));
+  const ids = new Set(results.filter(r => r.code === 201 || r.code === 402).map(r => r.body.id));
+  say(`5 identical requests sent at the same moment → <b>${ids.size} payment</b> created. The others were told it was already in progress (409) or got the saved result.`);
+  freshKey();
+});
+$("btnUnsafe").onclick = () => busy(null, async () => {
+  const f = readForm(); if (!f) return;
+  const results = await Promise.all(Array.from({length:5}, () => payments.unsafePay(f.customer, f.amount)));
+  results.forEach(r => log(r.code, `POST /v1/demo/unsafe-payment · ${describe(r)}`));
+  const ok = results.filter(r => r.code === 201).length;
+  say(`${ok} unsafe payments "succeeded", but they all read the same starting balance. The customer lost only ${rupees(f.amount)} while the merchant gained ${rupees(f.amount)} once per request in the ledger. Look at the audit.`);
+});
+$("btnReset").onclick = () => busy(null, async () => { await payments.reset(); lastRequest = null; $("log").innerHTML = '<li class="empty">Requests you send show up here with their status codes.</li>'; $("payResult").classList.remove("show"); freshKey(); });
+$("btnAudit").onclick = () => busy(null, async () => {});
+$("payRows").addEventListener("click", e => { const id = e.target.closest("[data-refund]")?.dataset.refund; if (!id) return;
+  busy(null, async () => { const res = await payments.refund(id, null, "refund-" + uid().slice(0,8));
+    log(res.code, `POST /v1/payments/${id}/refunds · ${res.body?.error ? res.body.error.message : "refunded " + rupees(res.body.amount)}`, res.replayed);
+    say(res.code === 201 ? `Refunded ${rupees(res.body.amount)} back to the customer.` : esc(res.body?.error?.message || "Refund failed")); }); });
+
+/* ---- RCA research UI ---- */
+const RCA = __RCA_JSON__;
+const CONDS = [["full","Full logs"],["noisy","Noisy logs"],["generic","Generic logs"],["metrics_only","Metrics only"]];
+const human = l => l.replace(/_/g, " ");
+const methodName = m => m === "rules" ? "Expert rules" : m === "majority" ? "Chance (always same)" : m.replace(/^llm:/, "AI: ");
+const rca = {inc: 0, cond: "full", guesses: {}};
+
+function renderRca(){
+  const inc = RCA.incidents[rca.inc], ev = inc.conditions[rca.cond];
+  $("incPick").innerHTML = RCA.incidents.map((x, i) => {
+    const done = CONDS.some(([c]) => rca.guesses[i + "|" + c]);
+    return `<button class="chip ${done ? "done" : ""}" type="button" aria-pressed="${i === rca.inc}" data-inc="${i}">#${x.n}</button>`;
+  }).join("");
+  $("condPick").innerHTML = CONDS.map(([c, name]) => `<button type="button" role="radio" aria-checked="${c === rca.cond}" data-cond="${c}">${name}</button>`).join("");
+  $("rcaAlert").textContent = ev.alert;
+
+  const row = (name, e) => {
+    const err = v => (100 * (v || 0)).toFixed(1) + "%";
+    const hotErr = (e.i.error_rate_5xx || 0) > 0.05 && (e.i.error_rate_5xx || 0) > 2 * (e.b.error_rate_5xx || 0);
+    const hotLat = (e.i.p95_ms || 0) > 3 * Math.max(e.b.p95_ms || 1, 1) && (e.i.p95_ms || 0) > 300;
+    return `<tr><td><code>${esc(name)}</code></td><td class="num">${esc(e.b.rps ?? "–")} → ${esc(e.i.rps ?? "–")}</td>
+      <td class="num ${hotErr ? "up" : ""}">${err(e.b.error_rate_5xx)} → ${err(e.i.error_rate_5xx)}</td>
+      <td class="num ${hotLat ? "up" : ""}">${esc(e.b.p95_ms ?? "–")} → ${esc(e.i.p95_ms ?? "–")} ms</td></tr>`;
+  };
+  $("rcaMetrics").innerHTML = `<thead><tr><th>Before → during</th><th class="num">req/s</th><th class="num">5xx errors</th><th class="num">p95 latency</th></tr></thead><tbody>` +
+    row("overall", ev.overall) + Object.entries(ev.endpoints).map(([p, e]) => row(p, e)).join("") + "</tbody>";
+
+  const codes = Object.entries(ev.status.i).map(([k, v]) => `${k}×${v}`).join(" ");
+  const facts = [
+    [`CPU ${Math.round(ev.cpu.b * 100)}% → ${Math.round(ev.cpu.i * 100)}%`, ev.cpu.i > 0.9],
+    [`Version ${ev.version.b} → ${ev.version.i}`, ev.version.b !== ev.version.i],
+    [`Status codes now: ${codes}`, false],
+    ...(ev.changes.length ? ev.changes.map(c => ["Change: " + c, false]) : [["No recent changes", false]]),
+  ];
+  $("rcaFacts").innerHTML = facts.map(([t, hot]) => `<span class="fact ${hot ? "hot" : ""}">${esc(t)}</span>`).join("");
+  $("logCount").textContent = ev.log_total ? (ev.log_total > ev.logs.length ? `last ${ev.logs.length} of ${ev.log_total} lines` : `${ev.log_total} lines`) : "";
+  $("rcaLogs").textContent = ev.logs.length ? ev.logs.join("\n") : (rca.cond === "metrics_only" ? "No logs in this condition. Diagnose from the metrics above." : "No log lines in this window.");
+
+  const key = rca.inc + "|" + rca.cond, guess = rca.guesses[key];
+  $("labelPick").innerHTML = RCA.labels.map(l => {
+    const cls = guess ? (inc.truth.includes(l) ? "truth" : l === guess ? "wrong" : "") : "";
+    return `<button type="button" data-label="${esc(l)}" class="${cls}" ${guess ? "disabled" : ""} title="${esc(RCA.descriptions[l] || "")}">${esc(human(l))}</button>`;
+  }).join("");
+
+  if (!guess){ $("verdict").innerHTML = '<p class="small" style="margin-top:12px">Pick what you think caused this alert. Hover a label for its meaning.</p>'; }
+  else {
+    const right = inc.truth.includes(guess);
+    const truthText = inc.truth.map(human).join(" + ");
+    const answers = inc.answers[rca.cond] || {};
+    const rows = Object.entries(answers).map(([m, a]) => {
+      const ok = inc.truth.includes(a.answer);
+      return `<tr><td>${esc(methodName(m))}</td><td>${esc(human(a.answer))}</td><td class="num">${Math.round((a.confidence || 0) * 100)}%</td><td>${ok ? '<b class="c2">right</b>' : '<b class="c4">wrong</b>'}</td></tr>`;
+    }).join("");
+    const aiRan = RCA.methods.some(m => m.startsWith("llm:"));
+    $("verdict").innerHTML = `<div class="verdict"><b class="${right ? "ok" : "no"}">${right ? "Correct." : "Not quite."}</b> The true cause was <b>${esc(truthText)}</b>${inc.truth.length > 1 ? " (two faults at once)" : ""}. ${esc(inc.truth.map(t => RCA.descriptions[t]).join(" "))}</div>
+      <h3 style="font-size:15px;margin:16px 0 6px">What each method answered here</h3>
+      <div class="scroll"><table><thead><tr><th>Method</th><th>Answer</th><th class="num">Confidence</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+      ${aiRan ? "" : '<p class="small">AI model answers appear here once the models are run and the site is rebuilt.</p>'}
+      <p class="small">Try the same incident with worse evidence: switch the evidence quality above.</p>`;
+  }
+  const all = Object.entries(rca.guesses), hits = all.filter(([k, g]) => RCA.incidents[+k.split("|")[0]].truth.includes(g)).length;
+  $("score").textContent = all.length ? `Your score: ${hits} of ${all.length} correct` : `${RCA.incidents.length} sample incidents from the benchmark`;
+}
+
+function renderRcaResults(){
+  const methods = RCA.methods.slice().sort((a, b) => (b.startsWith("llm:") - a.startsWith("llm:")) || a.localeCompare(b));
+  $("resultsTitle").textContent = `Accuracy across all ${RCA.dataset_size} benchmark incidents`;
+  $("rcaResults").innerHTML = CONDS.map(([c, name]) => `<div class="rgroup"><h3>${name}</h3>` + methods.map(m => {
+    const r = RCA.summary[m].by_condition[c], pctv = Math.round(r.acc * 1000) / 10;
+    const cls = m === "rules" ? "rules" : m === "majority" ? "majority" : "";
+    return `<div class="bar" title="${esc(methodName(m))}: ${pctv}% of ${r.n} (95% CI ${Math.round(r.ci[0]*100)}–${Math.round(r.ci[1]*100)}%)"><span>${esc(methodName(m))}</span><span class="track"><span class="fill ${cls}" style="width:${pctv}%;display:block"></span></span><span class="v">${pctv}%</span></div>`;
+  }).join("") + "</div>").join("");
+  const aiRan = methods.some(m => m.startsWith("llm:"));
+  $("rcaNote").textContent = (aiRan
+    ? "AI rows are real runs of each model on every incident. "
+    : "No AI models have been run yet: shown are the expert rules (written knowing the faults, so an upper reference) and chance. Run models in llm-rca-bench, then rebuild this page with build.py. ")
+    + `Data generated ${RCA.generated}.`;
+}
+
+$("incPick").addEventListener("click", e => { const b = e.target.closest("[data-inc]"); if (b){ rca.inc = +b.dataset.inc; renderRca(); } });
+$("condPick").addEventListener("click", e => { const b = e.target.closest("[data-cond]"); if (b){ rca.cond = b.dataset.cond; renderRca(); } });
+$("labelPick").addEventListener("click", e => { const b = e.target.closest("[data-label]"); if (b && !b.disabled){ rca.guesses[rca.inc + "|" + rca.cond] = b.dataset.label; renderRca(); } });
+renderRca(); renderRcaResults();
+
+/* ---- connect ---- */
+$("payUrl").value = store.get("payUrl");
+async function applyConnections(test){
+  const pu = $("payUrl").value.trim();
+  payments = new LocalPayments();
+  let msg = "Demo mode: the payments engine runs in your browser.";
+  if (pu){ const rp = new RemotePayments(pu);
+    try { if (test) { const h = await fetch(rp.base + "/health"); if (!h.ok) throw new Error("HTTP " + h.status); } payments = rp; msg = "Payments API connected."; }
+    catch (e) { msg = `Payments API unreachable (${esc(e.message)}). Using demo mode. In the Claude preview this is expected; host the page yourself to connect.`; } }
+  setMode(); await renderPayments();
+  return msg;
+}
+$("connectForm").addEventListener("submit", async e => { e.preventDefault();
+  store.set("payUrl", $("payUrl").value.trim());
+  const r = $("connectResult"); r.textContent = "Testing…"; r.classList.add("show"); r.innerHTML = await applyConnections(true); });
+$("btnDemo").onclick = async () => { $("payUrl").value = ""; store.set("payUrl","");
+  const r = $("connectResult"); r.innerHTML = await applyConnections(false); r.classList.add("show"); };
+
+/* ---- start ---- */
+freshKey(); setMode();
+showView(["payments","rca","connect"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "payments");
+renderPayments();
+if (store.get("payUrl")) applyConnections(true);
+}
+</script>
+</body>
+</html>
